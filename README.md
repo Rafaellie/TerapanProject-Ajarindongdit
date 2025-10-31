@@ -122,6 +122,26 @@ DB_PORT=5432
 
 ---
 
+## 🧾 Penjelasan File `requirements.txt`
+
+File `requirements.txt` berisi dependensi Python yang dibutuhkan untuk menjalankan backend Flask. Berikut penjelasan tiap library:
+
+| Library | Fungsi |
+|----------|--------|
+| **Flask** | Framework utama backend berbasis Python untuk membangun API dan routing server. |
+| **psycopg2-binary** | Driver untuk koneksi antara Flask dan database PostgreSQL. |
+| **Flask-SQLAlchemy** | ORM (Object Relational Mapper) untuk mengelola tabel dan query database dengan sintaks Python. |
+| **Flask-Login** | Mengatur sistem autentikasi dan sesi login pengguna. |
+| **flask-cors** | Mengaktifkan Cross-Origin Resource Sharing (CORS) agar backend bisa diakses dari frontend (ReactJS). |
+| **python-dotenv** | Mengelola variabel lingkungan dari file `.env` untuk konfigurasi aman (seperti password database atau secret key). |
+| **Flask-JWT-Extended** | Mengatur sistem autentikasi berbasis token (JSON Web Token) untuk API yang aman. |
+| **Flask-Bcrypt** | Meng-hash password pengguna sebelum disimpan ke database untuk keamanan. |
+| **pandas** | Mengelola dan memproses data tabular (CSV, Excel) untuk analisis penjualan. |
+| **scikit-learn** | Library machine learning untuk analisis tren atau prediksi penjualan. |
+| **spacy** | Library NLP (Natural Language Processing) untuk analisis teks, misalnya dari data deskripsi produk atau feedback pelanggan. |
+
+---
+
 ### 5. Testing (Opsional)
 Untuk menjalankan unit test dan integration test:
 ```bash

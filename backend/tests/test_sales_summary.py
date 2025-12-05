@@ -25,3 +25,18 @@ def test_sales_summary(client):
 
     assert "labels" in data
     assert "datasets" in data
+
+# def test_sales_summary_2(client):
+
+#     from tests.test_sales_summary import create_user_and_token
+#     token = create_user_and_token(client)
+
+#     response = client.get(
+#         "/api/sales-summary",
+#         headers={"Authorization": f"Bearer {token}"}
+#     )
+
+#     data = response.get_json()
+
+#     assert data["labels"][0] == "Minggu"
+

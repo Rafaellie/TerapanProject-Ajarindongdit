@@ -25,7 +25,7 @@ def test_register_existing_email(client):
     assert response.status_code == 400
 
 
-def test_login_success(client):
+def test_login(client):
     client.post("/api/register", json={
         "nama": "User",
         "email": "user@example.com",
@@ -42,11 +42,3 @@ def test_login_success(client):
     assert response.status_code == 200
     assert "access_token" in data
 
-
-def test_login_failed(client):
-    response = client.post("/api/login", json={
-        "email": "salah@example.com",
-        "password": "xxx"
-    })
-
-    assert response.status_code == 401

@@ -12,7 +12,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # 2. Konfigurasi
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or "sqlite:///default.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY') # Bisa disamakan
@@ -106,22 +106,15 @@ def register():
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    
+    email = data.get("email")
+    password = data.get("password")
+
     user = User.query.filter_by(email=email).first()
-    
-    # Cek user & password
     if not user or not user.check_password(password):
-        return jsonify({'error': 'Email atau password salah'}), 401
-        
-    # Jika benar, buat "tiket" (token)
-    access_token = create_access_token(identity=user.id)
-    return jsonify({
-        'message': 'Login berhasil!',
-        'access_token': access_token,
-        'user': user.to_json()
-    }), 200
+        return jsonify({"message": "Invalid credentials"}), 401
+
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify(access_token=access_token), 200
 
 @app.route('/api/sales-summary', methods=['GET'])
 @jwt_required() # Kita amankan juga endpoint ini

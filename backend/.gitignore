@@ -1,28 +1,21 @@
-# --- Python Bytecode & Cache ---
 __pycache__/
 *.py[cod]
 *$py.class
 
-# --- Virtual Environment (Sesuai gambar Anda: venv) ---
 venv/
 
-# --- Environment Variables (SANGAT PENTING: Jangan di-commit) ---
 .env
 
-# --- Testing Cache (Sesuai gambar Anda: .pytest_cache) ---
 .pytest_cache/
 .coverage
 htmlcov/
 
-# --- Distribution / Packaging ---
 build/
 dist/
 *.egg-info/
 
-# --- IDE / Editor Settings ---
 .vscode/
 .idea/
 
-# --- Database (Jika menggunakan SQLite lokal) ---
 *.sqlite3
 *.db

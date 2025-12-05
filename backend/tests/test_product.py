@@ -4,4 +4,4 @@ def test_get_products(client):
 
     data = response.get_json()
     assert isinstance(data, list)
-    assert len(data) >= 1  # otomatis menambah 1 produk contoh
+    assert len(data) >= 1 

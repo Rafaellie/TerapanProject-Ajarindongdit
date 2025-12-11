@@ -9,13 +9,14 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 
 # 1. Setup Awal
 load_dotenv()
-app = Flask(__name__)
+print("DATABASE_URL:", os.environ.get('DATABASE_URL'))
+app = Flask(__name__) 
 
 # 2. Konfigurasi
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or "sqlite:///default.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY') # Bisa disamakan
+app.config['JWT_SECRET_KEY'] = os.environ.get('SECRET_KEY')
 
 # 3. Inisialisasi Ekstensi
 db = SQLAlchemy(app)
@@ -26,7 +27,7 @@ login_manager = LoginManager(app) # Masih kita siapkan, walau fokus di JWT
 # Izinkan React (port 5174) untuk mengakses API
 # Kita tambahkan "Authorization" agar React bisa mengirim token
 CORS(app, 
-     resources={r"/api/*": {"origins": "http://localhost:5174"}}, 
+     resources={r"/api/*": {"origins": "http://localhost:8080"}}, 
      supports_credentials=True, 
      expose_headers=["Authorization"])
 
@@ -37,7 +38,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 class User(db.Model, UserMixin):
-    __tablename__ = 'user' # Sesuai ERD (hal 34)
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     nama = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
@@ -116,8 +117,41 @@ def login():
     access_token = create_access_token(identity=str(user.id))
     return jsonify(access_token=access_token), 200
 
+@app.route('/api/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({'error': 'User tidak ditemukan'}), 404
+
+    data = request.get_json()
+
+    if 'nama' in data:
+        user.nama = data['nama']
+
+    if 'email' in data and data['email'] != user.email:
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({'error': 'Email sudah digunakan oleh user lain'}), 400
+        user.email = data['email']
+
+    if 'password' in data and data['password']:
+        user.set_password(data['password'])
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Profil berhasil diperbarui!',
+            'user': user.to_json()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Gagal menyimpan perubahan: {str(e)}'}), 500
+
 @app.route('/api/sales-summary', methods=['GET'])
-@jwt_required() # Kita amankan juga endpoint ini
+@jwt_required() 
 def get_sales_summary():
     # --- INI HANYA DATA CONTOH ---
     # Nantinya, Anda akan mengambil data ini dari database

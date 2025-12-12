@@ -1,15 +1,51 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Transaction, TransactionType } from '@/types/finance';
-import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Transaction, TransactionType } from "@/types/finance";
+import { useFinanceStore } from "@/hooks/useFinanceStore";
+import { toast } from "sonner";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-const incomeCategories = ['Coffee Sales', 'Tea Sales', 'Juice Sales', 'Snacks', 'Merchandise', 'Other Income'];
-const expenseCategories = ['Raw Materials', 'Electricity', 'Rent', 'Salaries', 'Equipment', 'Marketing', 'Supplies', 'Other Expense'];
+const incomeCategories = [
+  "Coffee Sales",
+  "Tea Sales",
+  "Juice Sales",
+  "Snacks",
+  "Merchandise",
+  "Other Income",
+];
+const expenseCategories = [
+  "Raw Materials",
+  "Electricity",
+  "Rent",
+  "Salaries",
+  "Equipment",
+  "Marketing",
+  "Supplies",
+  "Other Expense",
+];
 
 interface TransactionDialogProps {
   open: boolean;
@@ -17,13 +53,19 @@ interface TransactionDialogProps {
   transaction?: Transaction | null;
 }
 
-export function TransactionDialog({ open, onOpenChange, transaction }: TransactionDialogProps) {
+export function TransactionDialog({
+  open,
+  onOpenChange,
+  transaction,
+}: TransactionDialogProps) {
   const { addTransaction, updateTransaction } = useFinanceStore();
-  const [type, setType] = useState<TransactionType>('income');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [type, setType] = useState<TransactionType>("income");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState<Date | undefined>(
+    transaction ? new Date(transaction.date) : new Date()
+  );
 
   useEffect(() => {
     if (transaction) {
@@ -31,21 +73,21 @@ export function TransactionDialog({ open, onOpenChange, transaction }: Transacti
       setAmount(transaction.amount.toString());
       setCategory(transaction.category);
       setDescription(transaction.description);
-      setDate(transaction.date);
+      setDate(new Date(transaction.date)); // fix: convert to Date
     } else {
-      setType('income');
-      setAmount('');
-      setCategory('');
-      setDescription('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setType("income");
+      setAmount("");
+      setCategory("");
+      setDescription("");
+      setDate(new Date()); // fix: use Date object, not string
     }
   }, [transaction, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!amount || !category || !description || !date) {
-      toast.error('Please fill in all fields');
+      toast.error("Please fill in all fields");
       return;
     }
 
@@ -54,32 +96,37 @@ export function TransactionDialog({ open, onOpenChange, transaction }: Transacti
       amount: parseFloat(amount),
       category,
       description,
-      date,
+      date: date.toISOString(), // fix backend format
     };
 
     if (transaction) {
       updateTransaction(transaction.id, transactionData);
-      toast.success('Transaction updated successfully');
+      toast.success("Transaction updated successfully");
     } else {
       addTransaction(transactionData);
-      toast.success('Transaction added successfully');
+      toast.success("Transaction added successfully");
     }
 
     onOpenChange(false);
   };
 
-  const categories = type === 'income' ? incomeCategories : expenseCategories;
+  const categories = type === "income" ? incomeCategories : expenseCategories;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{transaction ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
+          <DialogTitle>
+            {transaction ? "Edit Transaction" : "Add Transaction"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Type</Label>
-            <Select value={type} onValueChange={(value: TransactionType) => setType(value)}>
+            <Select
+              value={type}
+              onValueChange={(value: TransactionType) => setType(value)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -129,19 +176,44 @@ export function TransactionDialog({ open, onOpenChange, transaction }: Transacti
 
           <div className="space-y-2">
             <Label>Date</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "dd/MM/yyyy") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(d) => d && setDate(d)}
+                  className="
+                    rounded-md border bg-background
+                    [&_.rdp-head]:grid [&_.rdp-head]:grid-cols-7 [&_.rdp-head]:text-center
+                    [&_.rdp-head_cell]:text-sm [&_.rdp-head_cell]:font-semibold
+                  "
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">
-              {transaction ? 'Update' : 'Add'} Transaction
+              {transaction ? "Update" : "Add"} Transaction
             </Button>
           </div>
         </form>

@@ -1,124 +1,131 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Transaction, Product, RawMaterial } from '@/types/finance';
-import { dummyTransactions, dummyProducts, dummyRawMaterials } from '@/data/dummyData';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { Transaction, Product, RawMaterial } from "@/types/finance";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 
 interface FinanceStore {
   transactions: Transaction[];
   products: Product[];
   rawMaterials: RawMaterial[];
-  
-  // Transaction actions
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  
-  // Product actions
-  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  
-  // Raw Material actions
-  addRawMaterial: (material: Omit<RawMaterial, 'id' | 'createdAt'>) => void;
-  updateRawMaterial: (id: string, material: Partial<RawMaterial>) => void;
-  deleteRawMaterial: (id: string) => void;
-  
-  // Bulk actions
+
+  loadProducts: () => Promise<void>;
+  addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<void>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+
+  loadRawMaterials: () => Promise<void>;
+  addRawMaterial: (material: any) => Promise<void>;
+  updateRawMaterial: (id: string, material: any) => Promise<void>;
+  deleteRawMaterial: (id: string) => Promise<void>;
+
+  loadTransactions: () => Promise<void>;
+  addTransaction: (tx: Omit<Transaction, "id" | "createdAt">) => Promise<void>;
+  updateTransaction: (id: string, tx: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+
   importTransactions: (transactions: Transaction[]) => void;
   loadDummyData: () => void;
   clearAllData: () => void;
 }
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
 export const useFinanceStore = create<FinanceStore>()(
   persist(
-    (set) => ({
-      transactions: dummyTransactions,
-      products: dummyProducts,
-      rawMaterials: dummyRawMaterials,
-      
-      addTransaction: (transaction) =>
+    (set, get) => ({
+      transactions: [],
+      products: [],
+      rawMaterials: [],
+
+      loadProducts: async () => {
+        const data = await apiGet("/products");
+        set({ products: data });
+      },
+
+      addProduct: async (productData) => {
+        const newProduct = await apiPost("/products", productData);
+
         set((state) => ({
-          transactions: [
-            { ...transaction, id: generateId(), createdAt: new Date().toISOString() },
-            ...state.transactions,
-          ],
-        })),
-      
-      updateTransaction: (id, transaction) =>
+          products: [newProduct, ...state.products],
+        }));
+      },
+
+      updateProduct: async (id, product) => {
+        const updated = await apiPut(`/products/${id}`, product);
         set((state) => ({
-          transactions: state.transactions.map((t) =>
-            t.id === id ? { ...t, ...transaction } : t
-          ),
-        })),
-      
-      deleteTransaction: (id) =>
-        set((state) => ({
-          transactions: state.transactions.filter((t) => t.id !== id),
-        })),
-      
-      addProduct: (product) =>
-        set((state) => ({
-          products: [
-            { ...product, id: generateId(), createdAt: new Date().toISOString() },
-            ...state.products,
-          ],
-        })),
-      
-      updateProduct: (id, product) =>
-        set((state) => ({
-          products: state.products.map((p) =>
-            p.id === id ? { ...p, ...product } : p
-          ),
-        })),
-      
-      deleteProduct: (id) =>
+          products: state.products.map((p) => (p.id === id ? updated : p)),
+        }));
+      },
+
+      deleteProduct: async (id) => {
+        await apiDelete(`/products/${id}`);
         set((state) => ({
           products: state.products.filter((p) => p.id !== id),
-        })),
-      
-      addRawMaterial: (material) =>
+        }));
+      },
+
+      loadTransactions: async () => {
+        const data = await apiGet("/transactions");
+        set({ transactions: data });
+      },
+
+      addTransaction: async (transactionData) => {
+        const newTransaction = await apiPost("/transactions", transactionData);
         set((state) => ({
-          rawMaterials: [
-            { ...material, id: generateId(), createdAt: new Date().toISOString() },
-            ...state.rawMaterials,
-          ],
-        })),
-      
-      updateRawMaterial: (id, material) =>
+          transactions: [newTransaction, ...state.transactions],
+        }));
+      },
+
+      updateTransaction: async (id, transactionData) => {
+        const updated = await apiPut(`/transactions/${id}`, transactionData);
+        set((state) => ({
+          transactions: state.transactions.map((t) =>
+            t.id === id ? updated : t
+          ),
+        }));
+      },
+
+      deleteTransaction: async (id) => {
+        await apiDelete(`/transactions/${id}`);
+        set((state) => ({
+          transactions: state.transactions.filter((t) => t.id !== id),
+        }));
+      },
+
+      loadRawMaterials: async () => {
+        const data = await apiGet("/raw-materials");
+        set({ rawMaterials: data });
+      },
+
+      addRawMaterial: async (materialData) => {
+        const newMaterial = await apiPost("/raw-materials", materialData);
+        set((state) => ({
+          rawMaterials: [newMaterial, ...state.rawMaterials],
+        }));
+      },
+
+      updateRawMaterial: async (id, material) => {
+        const updated = await apiPut(`/raw-materials/${id}`, material);
         set((state) => ({
           rawMaterials: state.rawMaterials.map((m) =>
-            m.id === id ? { ...m, ...material } : m
+            m.id === id ? updated : m
           ),
-        })),
-      
-      deleteRawMaterial: (id) =>
+        }));
+      },
+
+      deleteRawMaterial: async (id) => {
+        await apiDelete(`/raw-materials/${id}`);
         set((state) => ({
           rawMaterials: state.rawMaterials.filter((m) => m.id !== id),
-        })),
-      
-      importTransactions: (transactions) =>
-        set((state) => ({
-          transactions: [...transactions, ...state.transactions],
-        })),
-      
+        }));
+      },
+
+      importTransactions: () => {},
       loadDummyData: () =>
-        set({
-          transactions: dummyTransactions,
-          products: dummyProducts,
-          rawMaterials: dummyRawMaterials,
-        }),
-      
+        set({ transactions: [], products: [], rawMaterials: [] }),
       clearAllData: () =>
-        set({
-          transactions: [],
-          products: [],
-          rawMaterials: [],
-        }),
+        set({ transactions: [], products: [], rawMaterials: [] }),
     }),
     {
-      name: 'finance-store',
+      name: "finance-store",
     }
   )
 );

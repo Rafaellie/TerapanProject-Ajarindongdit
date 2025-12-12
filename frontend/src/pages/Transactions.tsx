@@ -1,14 +1,35 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Trash2, Edit, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { TransactionDialog } from '@/components/transactions/TransactionDialog';
-import { Transaction } from '@/types/finance';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useState, useMemo, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Trash2,
+  Edit,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useFinanceStore } from "@/hooks/useFinanceStore";
+import { TransactionDialog } from "@/components/transactions/TransactionDialog";
+import { Transaction } from "@/types/finance";
+import {
+  format,
+  parseISO,
+  isWithinInterval,
+  startOfDay,
+  endOfDay,
+  subDays,
+} from "date-fns";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,17 +39,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 export default function Transactions() {
-  const { transactions, deleteTransaction } = useFinanceStore();
+  const { transactions, loadTransactions, deleteTransaction } =
+    useFinanceStore();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
@@ -36,42 +63,47 @@ export default function Transactions() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (
-          !t.description.toLowerCase().includes(query) &&
-          !t.category.toLowerCase().includes(query)
+          !String(t.description || "").toLowerCase().includes(query) &&
+          !String(t.category || "").toLowerCase().includes(query)
         ) {
           return false;
         }
       }
 
       // Type filter
-      if (typeFilter !== 'all' && t.type !== typeFilter) {
+      if (typeFilter !== "all" && t.type !== typeFilter) {
         return false;
       }
 
       // Period filter
-      if (periodFilter !== 'all') {
+      if (periodFilter !== "all") {
         const transactionDate = parseISO(t.date);
         const now = new Date();
         let startDate: Date;
 
         switch (periodFilter) {
-          case 'today':
+          case "today":
             startDate = startOfDay(now);
             break;
-          case 'week':
+          case "week":
             startDate = subDays(now, 7);
             break;
-          case 'month':
+          case "month":
             startDate = subDays(now, 30);
             break;
-          case 'year':
+          case "year":
             startDate = subDays(now, 365);
             break;
           default:
             return true;
         }
 
-        if (!isWithinInterval(transactionDate, { start: startDate, end: endOfDay(now) })) {
+        if (
+          !isWithinInterval(transactionDate, {
+            start: startDate,
+            end: endOfDay(now),
+          })
+        ) {
           return false;
         }
       }
@@ -81,11 +113,12 @@ export default function Transactions() {
   }, [transactions, searchQuery, typeFilter, periodFilter]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -100,7 +133,7 @@ export default function Transactions() {
   const confirmDelete = () => {
     if (deletingId) {
       deleteTransaction(deletingId);
-      toast.success('Transaction deleted successfully');
+      toast.success("Transaction deleted successfully");
       setDeleteDialogOpen(false);
       setDeletingId(null);
     }
@@ -108,10 +141,10 @@ export default function Transactions() {
 
   const totals = useMemo(() => {
     const income = filteredTransactions
-      .filter((t) => t.type === 'income')
+      .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
     const expense = filteredTransactions
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
     return { income, expense, net: income - expense };
   }, [filteredTransactions]);
@@ -122,7 +155,9 @@ export default function Transactions() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
-          <p className="mt-1 text-muted-foreground">Manage your income and expenses</p>
+          <p className="mt-1 text-muted-foreground">
+            Manage your income and expenses
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -139,15 +174,24 @@ export default function Transactions() {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="stat-card">
           <p className="text-sm text-muted-foreground">Filtered Income</p>
-          <p className="text-2xl font-bold text-success">{formatCurrency(totals.income)}</p>
+          <p className="text-2xl font-bold text-success">
+            {formatCurrency(totals.income)}
+          </p>
         </div>
         <div className="stat-card">
           <p className="text-sm text-muted-foreground">Filtered Expenses</p>
-          <p className="text-2xl font-bold text-destructive">{formatCurrency(totals.expense)}</p>
+          <p className="text-2xl font-bold text-destructive">
+            {formatCurrency(totals.expense)}
+          </p>
         </div>
         <div className="stat-card">
           <p className="text-sm text-muted-foreground">Net Balance</p>
-          <p className={cn('text-2xl font-bold', totals.net >= 0 ? 'text-success' : 'text-destructive')}>
+          <p
+            className={cn(
+              "text-2xl font-bold",
+              totals.net >= 0 ? "text-success" : "text-destructive"
+            )}
+          >
             {formatCurrency(totals.net)}
           </p>
         </div>
@@ -194,30 +238,51 @@ export default function Transactions() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Type</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Amount</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Date
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Description
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Category
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Type
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Amount
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.map((transaction) => (
-                <tr key={transaction.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                <tr
+                  key={transaction.id}
+                  className="border-b border-border last:border-0 hover:bg-muted/30"
+                >
                   <td className="px-4 py-3 text-sm text-foreground">
-                    {format(parseISO(transaction.date), 'MMM dd, yyyy')}
+                    {format(parseISO(transaction.date), "MMM dd, yyyy")}
                   </td>
-                  <td className="px-4 py-3 text-sm text-foreground">{transaction.description}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{transaction.category}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">
+                    {transaction.description}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {transaction.category}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium',
-                        transaction.type === 'income' ? 'income-badge' : 'expense-badge'
+                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+                        transaction.type === "income"
+                          ? "income-badge"
+                          : "expense-badge"
                       )}
                     >
-                      {transaction.type === 'income' ? (
+                      {transaction.type === "income" ? (
                         <ArrowUpRight className="h-3 w-3" />
                       ) : (
                         <ArrowDownRight className="h-3 w-3" />
@@ -227,11 +292,13 @@ export default function Transactions() {
                   </td>
                   <td
                     className={cn(
-                      'px-4 py-3 text-right text-sm font-medium',
-                      transaction.type === 'income' ? 'text-success' : 'text-destructive'
+                      "px-4 py-3 text-right text-sm font-medium",
+                      transaction.type === "income"
+                        ? "text-success"
+                        : "text-destructive"
                     )}
                   >
-                    {transaction.type === 'income' ? '+' : '-'}
+                    {transaction.type === "income" ? "+" : "-"}
                     {formatCurrency(transaction.amount)}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -276,12 +343,16 @@ export default function Transactions() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this transaction? This action cannot be undone.
+              Are you sure you want to delete this transaction? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

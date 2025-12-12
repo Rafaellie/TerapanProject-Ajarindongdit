@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { format, subDays, parseISO, startOfDay } from 'date-fns';
+import { formatCurrency } from "@/lib/formatCurrency";
 
 export function RevenueChart() {
   const { transactions } = useFinanceStore();
@@ -46,9 +47,9 @@ export function RevenueChart() {
         <h3 className="text-lg font-semibold text-foreground">Revenue Overview</h3>
         <p className="text-sm text-muted-foreground">Last 30 days performance</p>
       </div>
-      <div className="h-72">
+      <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 25, bottom: 10 }}>
             <defs>
               <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(var(--chart-income))" stopOpacity={0.3} />
@@ -72,7 +73,8 @@ export function RevenueChart() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `$${value}`}
+              tickFormatter={(value) => formatCurrency(value)}
+              domain={['auto', 'auto']} 
             />
             <Tooltip
               contentStyle={{

@@ -26,6 +26,8 @@ import {
 } from 'recharts';
 import { parseISO, format, subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from "@/lib/formatCurrency";
+
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -148,7 +150,7 @@ export default function Analytics() {
       recs.push({
         type: 'success',
         title: 'Top Performer',
-        description: `${best.category} is your best-selling category with $${best.revenue.toFixed(0)} in revenue this month.`,
+        description: `${best.category} is your best-selling category with Rp. ${best.revenue.toFixed(0)} in revenue this month.`,
       });
     }
 
@@ -200,11 +202,10 @@ export default function Analytics() {
   }, [salesTrends, expenseBreakdown, products]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -269,7 +270,7 @@ export default function Analytics() {
                   type="number"
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={12}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value) => formatCurrency(value)}
                 />
                 <YAxis
                   type="category"
@@ -364,10 +365,11 @@ export default function Analytics() {
                 tickLine={false}
               />
               <YAxis
+                width={80}
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `Rp.${value}`}
               />
               <Tooltip
                 contentStyle={{

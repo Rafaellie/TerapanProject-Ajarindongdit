@@ -2,13 +2,13 @@ export type TransactionType = 'income' | 'expense';
 
 export interface Transaction {
   id: string;
-  type: TransactionType;
+  type: 'income' | 'expense';
   amount: number;
-  category: string;
-  description: string;
-  date: string;
-  productId?: string;
-  createdAt: string;
+  category?: string;
+  description?: string;
+  product_id?: number | null;
+  date: string; // YYYY-MM-DD
+  createdAt?: string;
 }
 
 export interface Product {

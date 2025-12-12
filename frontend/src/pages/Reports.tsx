@@ -143,11 +143,10 @@ export default function Reports() {
   }, [reportData]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -349,10 +348,11 @@ export default function Reports() {
                 tickLine={false}
               />
               <YAxis
+                width={80}
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `Rp. ${value}`}
               />
               <Tooltip
                 contentStyle={{

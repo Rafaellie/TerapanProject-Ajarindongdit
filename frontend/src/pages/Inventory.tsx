@@ -1,13 +1,18 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { RawMaterial } from '@/types/finance';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useState, useMemo, useEffect } from "react";
+import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useFinanceStore } from "@/hooks/useFinanceStore";
+import { RawMaterial } from "@/types/finance";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,27 +22,43 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 export default function Inventory() {
-  const { rawMaterials, addRawMaterial, updateRawMaterial, deleteRawMaterial } = useFinanceStore();
+  const {
+    rawMaterials,
+    loadRawMaterials,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+  } = useFinanceStore();
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(
+    null
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
-  const [minStock, setMinStock] = useState('10');
-  const [unit, setUnit] = useState('kg');
-  const [supplier, setSupplier] = useState('');
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+  const [minStock, setMinStock] = useState("10");
+  const [unit, setUnit] = useState("kg");
+  const [supplier, setSupplier] = useState("");
+
+  useEffect(() => {
+    loadRawMaterials();
+  }, []);
 
   const filteredMaterials = useMemo(() => {
     return rawMaterials.filter((m) => {
-      if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (
+        searchQuery &&
+        !m.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
       return true;
@@ -49,19 +70,20 @@ export default function Inventory() {
   }, [rawMaterials]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(amount);
   };
 
   const resetForm = () => {
-    setName('');
-    setPrice('');
-    setStock('');
-    setMinStock('10');
-    setUnit('kg');
-    setSupplier('');
+    setName("");
+    setPrice("");
+    setStock("");
+    setMinStock("10");
+    setUnit("kg");
+    setSupplier("");
   };
 
   const handleEdit = (material: RawMaterial) => {
@@ -83,7 +105,7 @@ export default function Inventory() {
   const confirmDelete = () => {
     if (deletingId) {
       deleteRawMaterial(deletingId);
-      toast.success('Material deleted successfully');
+      toast.success("Material deleted successfully");
       setDeleteDialogOpen(false);
       setDeletingId(null);
     }
@@ -93,7 +115,7 @@ export default function Inventory() {
     e.preventDefault();
 
     if (!name || !price || !stock || !supplier) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -108,10 +130,10 @@ export default function Inventory() {
 
     if (editingMaterial) {
       updateRawMaterial(editingMaterial.id, materialData);
-      toast.success('Material updated successfully');
+      toast.success("Material updated successfully");
     } else {
       addRawMaterial(materialData);
-      toast.success('Material added successfully');
+      toast.success("Material added successfully");
     }
 
     setDialogOpen(false);
@@ -125,7 +147,9 @@ export default function Inventory() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
-          <p className="mt-1 text-muted-foreground">Manage raw materials and supplies</p>
+          <p className="mt-1 text-muted-foreground">
+            Manage raw materials and supplies
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -144,7 +168,8 @@ export default function Inventory() {
         <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4">
           <AlertTriangle className="h-5 w-5 text-warning" />
           <p className="text-sm text-foreground">
-            <span className="font-medium">{lowStockCount} items</span> are running low on stock
+            <span className="font-medium">{lowStockCount} items</span> are
+            running low on stock
           </p>
         </div>
       )}
@@ -166,27 +191,48 @@ export default function Inventory() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Material</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Supplier</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Price</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Stock</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Min Stock</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Material
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  Supplier
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Price
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Min Stock
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredMaterials.map((material) => (
-                <tr key={material.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                <tr
+                  key={material.id}
+                  className="border-b border-border last:border-0 hover:bg-muted/30"
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                         <Boxes className="h-5 w-5 text-primary" />
                       </div>
-                      <span className="font-medium text-foreground">{material.name}</span>
+                      <span className="font-medium text-foreground">
+                        {material.name}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{material.supplier}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {material.supplier}
+                  </td>
                   <td className="px-4 py-3 text-right text-sm text-foreground">
                     {formatCurrency(material.price)}/{material.unit}
                   </td>
@@ -199,21 +245,31 @@ export default function Inventory() {
                   <td className="px-4 py-3 text-center">
                     <span
                       className={cn(
-                        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
                         material.stock <= material.minStock
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-success/10 text-success'
+                          ? "bg-warning/10 text-warning"
+                          : "bg-success/10 text-success"
                       )}
                     >
-                      {material.stock <= material.minStock ? 'Low Stock' : 'In Stock'}
+                      {material.stock <= material.minStock
+                        ? "Low Stock"
+                        : "In Stock"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(material)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(material)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(material.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(material.id)}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -224,7 +280,9 @@ export default function Inventory() {
           </table>
         </div>
         {filteredMaterials.length === 0 && (
-          <div className="py-12 text-center text-muted-foreground">No materials found</div>
+          <div className="py-12 text-center text-muted-foreground">
+            No materials found
+          </div>
         )}
       </div>
 
@@ -232,7 +290,9 @@ export default function Inventory() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingMaterial ? 'Edit Material' : 'Add Material'}</DialogTitle>
+            <DialogTitle>
+              {editingMaterial ? "Edit Material" : "Add Material"}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -299,10 +359,16 @@ export default function Inventory() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit">{editingMaterial ? 'Update' : 'Add'} Material</Button>
+              <Button type="submit">
+                {editingMaterial ? "Update" : "Add"} Material
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -314,7 +380,8 @@ export default function Inventory() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Material</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this material? This action cannot be undone.
+              Are you sure you want to delete this material? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

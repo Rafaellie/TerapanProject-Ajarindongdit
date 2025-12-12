@@ -1,6 +1,7 @@
 /* @config "../tailwind.config.ts"; */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import "react-day-picker/dist/style.css";
 
 @tailwind base;
 @tailwind components;
@@ -211,3 +212,64 @@
   }
 }
 
+.rdp { 
+  display: inline-block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.rdp-caption {
+  text-align: center !important;
+  padding: 6px 0 !important;
+}
+
+.rdp-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 6px !important;
+}
+
+.rdp-table {
+  width: 100% !important;
+  table-layout: fixed !important;     
+  border-collapse: collapse !important;
+  margin: 0 !important;
+}
+
+.rdp-head { 
+  display: table-header-group !important;
+}
+.rdp-head_row,
+.rdp-row {
+  display: table-row !important;
+}
+
+.rdp-head_cell,
+.rdp-cell {
+  display: table-cell !important;
+  width: calc(100% / 7) !important;  
+  text-align: center !important;
+  padding: 8px 6px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.rdp-cell {
+  height: 44px !important;            
+}
+
+.rdp-nav button,
+.rdp-nav button:focus {
+  background: transparent !important;
+  border: none !important;
+  padding: 6px !important;
+}
+
+th, td {
+  display: table-cell !important;
+}
+
+.rdp {
+  z-index: 9999 !important;
+}

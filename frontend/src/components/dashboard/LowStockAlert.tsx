@@ -11,6 +11,16 @@ export function LowStockAlert() {
 
   const totalAlerts = lowStockProducts.length + lowStockMaterials.length;
 
+  let targetPath = "/inventory"; 
+
+  if (lowStockProducts.length > 0 && lowStockMaterials.length === 0) {
+    targetPath = "/products";
+  } else if (lowStockMaterials.length > 0 && lowStockProducts.length === 0) {
+    targetPath = "/inventory";
+  } else if (lowStockProducts.length > 0 && lowStockMaterials.length > 0) {
+    targetPath = "/inventory"; 
+  }
+
   if (totalAlerts === 0) {
     return (
       <div className="stat-card animate-slide-up">
@@ -39,7 +49,7 @@ export function LowStockAlert() {
             <p className="text-sm text-muted-foreground">{totalAlerts} items need attention</p>
           </div>
         </div>
-        <Link to="/inventory">
+        <Link to={targetPath}>
           <Button variant="outline" size="sm">
             Manage
           </Button>

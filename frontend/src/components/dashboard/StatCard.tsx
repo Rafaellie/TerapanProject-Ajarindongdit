@@ -48,8 +48,8 @@ export function StatCard({
             {formatValue(value)}
           </p>
         </div>
-        <div className={cn("rounded-xl p-3", iconColors[variant])}>
-          <Icon className="h-5 w-5" />
+        <div className={cn("rounded-xl p-3 shrink-0 -mt-5 -ml-3", iconColors[variant])}>
+          <Icon className="h-3 w-3" />
         </div>
       </div>
       {change !== undefined && (

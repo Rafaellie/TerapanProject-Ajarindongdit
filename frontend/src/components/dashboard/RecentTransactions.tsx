@@ -10,9 +10,10 @@ export function RecentTransactions() {
   const recentTransactions = transactions.slice(0, 8);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(amount);
   };
 

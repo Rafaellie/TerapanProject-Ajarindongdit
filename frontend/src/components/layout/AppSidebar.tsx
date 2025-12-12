@@ -47,7 +47,7 @@ export function AppSidebar() {
           </div>
           {!isCollapsed && (
             <div className="overflow-hidden">
-              <h1 className="text-lg font-bold text-sidebar-foreground truncate">FinanceHub</h1>
+              <h1 className="text-lg font-bold text-sidebar-foreground truncate">Finance</h1>
               <p className="text-xs text-muted-foreground truncate">Sales & Analytics</p>
             </div>
           )}

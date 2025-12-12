@@ -76,7 +76,7 @@ const Register = () => {
             <div className="p-2 bg-primary/10 rounded-xl">
               <TrendingUp className="h-8 w-8 text-primary" />
             </div>
-            <span className="text-2xl font-bold text-foreground">FinanceHub</span>
+            <span className="text-2xl font-bold text-foreground">Finance</span>
           </div>
           <p className="text-muted-foreground text-sm">Start managing your finances today</p>
         </div>

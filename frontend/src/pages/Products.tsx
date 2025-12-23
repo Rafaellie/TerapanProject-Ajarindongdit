@@ -137,8 +137,12 @@ export default function Products() {
         {filteredProducts.map((product) => (
           <div key={product.id} className="stat-card">
             <div className="flex items-start justify-between">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <Package className="h-6 w-6 text-primary" />
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
+                {product.image ? (
+                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                ) : (
+                  <Package className="h-7 w-7 text-primary" />
+                )}
               </div>
               <div className="flex gap-1">
                 <Button

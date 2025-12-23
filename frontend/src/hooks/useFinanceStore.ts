@@ -9,13 +9,13 @@ interface FinanceStore {
   rawMaterials: RawMaterial[];
 
   loadProducts: () => Promise<void>;
-  addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<void>;
-  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+  addProduct: (product: FormData | Omit<Product, "id" | "createdAt">) => Promise<void>;
+  updateProduct: (id: string, product: FormData | Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
 
   loadRawMaterials: () => Promise<void>;
-  addRawMaterial: (material: any) => Promise<void>;
-  updateRawMaterial: (id: string, material: any) => Promise<void>;
+  addRawMaterial: (material: FormData | any) => Promise<void>;
+  updateRawMaterial: (id: string, material: FormData | any) => Promise<void>;
   deleteRawMaterial: (id: string) => Promise<void>;
 
   loadTransactions: () => Promise<void>;
@@ -42,14 +42,13 @@ export const useFinanceStore = create<FinanceStore>()(
 
       addProduct: async (productData) => {
         const newProduct = await apiPost("/products", productData);
-
         set((state) => ({
           products: [newProduct, ...state.products],
         }));
       },
 
-      updateProduct: async (id, product) => {
-        const updated = await apiPut(`/products/${id}`, product);
+      updateProduct: async (id, productData) => {
+        const updated = await apiPut(`/products/${id}`, productData);
         set((state) => ({
           products: state.products.map((p) => (p.id === id ? updated : p)),
         }));

@@ -1,24 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { User, Mail, Save, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Save, Lock, Eye, EyeOff, Camera } from "lucide-react";
 
 export default function Profile() {
   const { user, updateProfile } = useAuth();
-  
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // State untuk preview gambar
+  const [avatarPreview, setAvatarPreview] = useState("");
+  // State untuk file asli yang akan dikirim ke backend
+  const [avatarFile, setAvatarFile] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (user) {
       setName(user.nama || "");
       setEmail(user.email || "");
+
+      setAvatarPreview(user.profile_picture || "");
     }
   }, [user]);
 
@@ -28,27 +37,56 @@ export default function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // --- Handle Update Profil (Nama & Email) ---
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 2MB");
+        return;
+      }
+
+      // Simpan file asli untuk dikirim nanti
+      setAvatarFile(file);
+
+      // Buat preview lokal
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // --- Handle Update Profil (Nama, Email & Avatar) ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await updateProfile({
-        nama: name,
-        email: email
-    });
+    // Gunakan FormData untuk mengirim file + text
+    const formData = new FormData();
+    formData.append("nama", name);
+    formData.append("email", email);
+
+    // Hanya append avatar jika user memilih file baru
+    if (avatarFile) {
+      formData.append("avatar", avatarFile);
+    }
+
+    const result = await updateProfile(formData);
 
     if (result.success) {
-        toast.success(result.message || "Profil berhasil diperbarui");
+      toast.success(result.message || "Profil berhasil diperbarui");
+      // Reset file state setelah sukses
+      setAvatarFile(null);
     } else {
-        toast.error(result.message || "Gagal memperbarui profil");
+      toast.error(result.message || "Gagal memperbarui profil");
     }
-    
+
     setIsLoading(false);
   };
 
-  // --- Handle Update Password ---
-  const handlePasswordChange = async (e: React.FormEvent) => {
+
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -63,22 +101,25 @@ export default function Profile() {
 
     setIsPasswordLoading(true);
 
+    // Untuk password, kita masih bisa pakai JSON biasa atau FormData,
+    // tapi karena updateProfile sekarang support FormData, kita pakai JSON object
+    // dan updateProfile akan otomatis handle (karena bukan instance of FormData)
     const result = await updateProfile({
-        password: newPassword
+      password: newPassword,
     });
 
     if (result.success) {
-        toast.success("Password berhasil diubah");
-        setNewPassword("");
-        setConfirmPassword("");
+      toast.success("Password berhasil diubah");
+      setNewPassword("");
+      setConfirmPassword("");
     } else {
-        toast.error(result.message || "Gagal mengubah password");
+      toast.error(result.message || "Gagal mengubah password");
     }
 
     setIsPasswordLoading(false);
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name) => {
     if (!name) return "U";
     return name
       .split(" ")
@@ -100,19 +141,23 @@ export default function Profile() {
         <Card className="md:col-span-1">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {getInitials(user?.nama || "U")}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={avatarPreview} alt={name} className="object-cover" />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{getInitials(name || "U")}</AvatarFallback>
+                </Avatar>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                  <Camera className="h-4 w-4" />
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+              </div>
             </div>
-            <CardTitle>{user?.nama || "User"}</CardTitle>
-            <CardDescription>{user?.email || "Email"}</CardDescription>
+            <CardTitle>{name || "User"}</CardTitle>
+            <CardDescription>{email}</CardDescription>
           </CardHeader>
         </Card>
 
         <div className="md:col-span-2 space-y-6">
-          {/* Edit Profile Form */}
           <Card>
             <CardHeader>
               <CardTitle>Edit Profile</CardTitle>
@@ -144,7 +189,7 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Change Password Form */}
+          {/* Change Password Form (Copy Paste form password yang lama di sini) */}
           <Card>
             <CardHeader>
               <CardTitle>Ubah Password</CardTitle>

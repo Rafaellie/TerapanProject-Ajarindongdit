@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Product } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { toast } from 'sonner';
+import { Camera, Package, X } from 'lucide-react';
 
 const categories = ['Coffee', 'Tea', 'Juice', 'Snacks', 'Merchandise', 'Other'];
 
@@ -18,6 +19,7 @@ interface ProductDialogProps {
 
 export function ProductDialog({ open, onOpenChange, product }: ProductDialogProps) {
   const { addProduct, updateProduct } = useFinanceStore();
+  
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [cost, setCost] = useState('');
@@ -25,6 +27,13 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
   const [stock, setStock] = useState('');
   const [minStock, setMinStock] = useState('10');
   const [unit, setUnit] = useState('pcs');
+  
+  // State untuk preview (URL string)
+  const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
+  // State untuk file asli (File object)
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (product) {
@@ -35,7 +44,15 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
       setStock(product.stock.toString());
       setMinStock(product.minStock.toString());
       setUnit(product.unit);
+      // Gunakan URL dari backend untuk preview
+      setImagePreview(product.image); 
+      setImageFile(null); // Reset file baru saat buka mode edit
     } else {
+      resetForm();
+    }
+  }, [product, open]);
+
+  const resetForm = () => {
       setName('');
       setPrice('');
       setCost('');
@@ -43,8 +60,37 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
       setStock('');
       setMinStock('10');
       setUnit('pcs');
+      setImagePreview(undefined);
+      setImageFile(null);
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image size must be less than 2MB');
+        return;
+      }
+      
+      // Simpan file asli untuk dikirim ke backend
+      setImageFile(file);
+
+      // Buat preview lokal
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }, [product, open]);
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(undefined);
+    setImageFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,21 +100,28 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
       return;
     }
 
-    const productData = {
-      name,
-      price: parseFloat(price),
-      cost: parseFloat(cost),
-      category,
-      stock: parseInt(stock),
-      minStock: parseInt(minStock),
-      unit,
-    };
+    // Gunakan FormData agar bisa kirim file
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('price', price);
+    formData.append('cost', cost);
+    formData.append('category', category);
+    formData.append('stock', stock);
+    formData.append('minStock', minStock);
+    formData.append('unit', unit);
+
+    // Jika user memilih file baru, append ke formData
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
 
     if (product) {
-      updateProduct(product.id, productData);
+      // Logic update
+      updateProduct(product.id, formData);
       toast.success('Product updated successfully');
     } else {
-      addProduct(productData);
+      // Logic add
+      addProduct(formData);
       toast.success('Product added successfully');
     }
 
@@ -82,6 +135,46 @@ export function ProductDialog({ open, onOpenChange, product }: ProductDialogProp
           <DialogTitle>{product ? 'Edit Product' : 'Add Product'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          <div className="flex justify-center">
+            <div className="relative">
+              <div 
+                className="flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/50 transition-colors hover:border-primary hover:bg-muted"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Product" className="h-full w-full object-cover" />
+                ) : (
+                  <Package className="h-10 w-10 text-muted-foreground" />
+                )}
+              </div>
+              <button
+                type="button"
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+              {imagePreview && (
+                <button
+                  type="button"
+                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-transform hover:scale-110"
+                  onClick={handleRemoveImage}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </div>
+          </div>
+          <p className="text-center text-xs text-muted-foreground">Click to upload product image (max 2MB)</p>
+
           <div className="space-y-2">
             <Label>Name</Label>
             <Input

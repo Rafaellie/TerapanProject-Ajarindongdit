@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,6 +40,7 @@ export default function Inventory() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -48,6 +49,8 @@ export default function Inventory() {
   const [minStock, setMinStock] = useState("10");
   const [unit, setUnit] = useState("kg");
   const [supplier, setSupplier] = useState("");
+  const [image, setImage] = useState<string | undefined>(undefined);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadRawMaterials();
@@ -84,6 +87,37 @@ export default function Inventory() {
     setMinStock("10");
     setUnit("kg");
     setSupplier("");
+    setImage(undefined);
+    setImageFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image size must be less than 2MB');
+        return;
+      }
+      
+      setImageFile(file);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(undefined);
+    setImageFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleEdit = (material: RawMaterial) => {
@@ -94,6 +128,8 @@ export default function Inventory() {
     setMinStock(material.minStock.toString());
     setUnit(material.unit);
     setSupplier(material.supplier);
+    setImage(material.image);
+    setImageFile(null);
     setDialogOpen(true);
   };
 
@@ -119,20 +155,23 @@ export default function Inventory() {
       return;
     }
 
-    const materialData = {
-      name,
-      price: parseFloat(price),
-      stock: parseInt(stock),
-      minStock: parseInt(minStock),
-      unit,
-      supplier,
-    };
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("price", price);
+    formData.append("stock", stock);
+    formData.append("minStock", minStock);
+    formData.append("unit", unit);
+    formData.append("supplier", supplier);
+
+    if (imageFile) {
+        formData.append("image", imageFile);
+    }
 
     if (editingMaterial) {
-      updateRawMaterial(editingMaterial.id, materialData);
+      updateRawMaterial(editingMaterial.id, formData);
       toast.success("Material updated successfully");
     } else {
-      addRawMaterial(materialData);
+      addRawMaterial(formData);
       toast.success("Material added successfully");
     }
 
@@ -222,8 +261,12 @@ export default function Inventory() {
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Boxes className="h-5 w-5 text-primary" />
+                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
+                        {material.image ? (
+                          <img src={material.image} alt={material.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <Boxes className="h-5 w-5 text-primary" />
+                        )}
                       </div>
                       <span className="font-medium text-foreground">
                         {material.name}
@@ -295,6 +338,46 @@ export default function Inventory() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div className="flex justify-center">
+              <div className="relative">
+                <div 
+                  className="flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted/50 transition-colors hover:border-primary hover:bg-muted"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {image ? (
+                    <img src={image} alt="Material" className="h-full w-full object-cover" />
+                  ) : (
+                    <Boxes className="h-10 w-10 text-muted-foreground" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+                {image && (
+                  <button
+                    type="button"
+                    className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-transform hover:scale-110"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+              </div>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">Click to upload material image (max 2MB)</p>
+
             <div className="space-y-2">
               <Label>Name</Label>
               <Input

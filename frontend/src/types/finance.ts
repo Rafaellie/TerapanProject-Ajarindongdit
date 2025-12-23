@@ -20,6 +20,7 @@ export interface Product {
   stock: number;
   minStock: number;
   unit: string;
+  image?: string;
   createdAt: string;
 }
 
@@ -31,6 +32,7 @@ export interface RawMaterial {
   minStock: number;
   unit: string;
   supplier: string;
+  image?: string;
   createdAt: string;
 }
 

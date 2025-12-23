@@ -2,9 +2,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Receipt, FileText, TrendingUp, Package, Boxes, BarChart3, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
-import { useState, useEffect } from "react";
 import { useAuth } from "../../AuthContext";
 
 const navItems = [
@@ -75,6 +74,7 @@ export function AppSidebar() {
         {/* Profile Section */}
         <NavLink to="/profile" className={({ isActive }) => cn("flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent", isCollapsed && "justify-center px-2", isActive && "bg-sidebar-accent")}>
           <Avatar className="h-8 w-8 shrink-0">
+            <AvatarImage src={user?.profile_picture} className="object-cover" />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(user?.nama || "U")}</AvatarFallback>
           </Avatar>
           {!isCollapsed && (

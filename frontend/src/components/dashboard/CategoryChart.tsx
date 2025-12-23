@@ -42,7 +42,7 @@ export function CategoryChart() {
                 backgroundColor: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
-                color: "#ffffff", // Mengubah warna teks default container
+                color: "#ffffff",
               }}
               itemStyle={{
                 color: "#ffffff",

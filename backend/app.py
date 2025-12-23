@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 from datetime import datetime, timedelta
+from groq import Groq
+import json
 
 # 1. Setup Awal
 load_dotenv()
@@ -49,8 +51,7 @@ CORS(app,
      supports_credentials=True, 
      expose_headers=["Authorization"])
 
-
-# --- Model Database ---
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -592,6 +593,100 @@ def delete_transaction(id):
     db.session.delete(tx)
     db.session.commit()
     return jsonify({'message': 'Transaction deleted'}), 200
+
+@app.route('/api/analytics/ai-insights', methods=['GET'])
+@jwt_required()
+def get_ai_insights():
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=90)
+    
+    transactions = Transaction.query.filter(
+        Transaction.date >= start_date.date(),
+        Transaction.date <= end_date.date(),
+        Transaction.type == 'income'
+    ).all()
+
+    sales_by_date = {}
+    sales_by_category = {}
+
+    for t in transactions:
+        d_str = t.date.strftime('%Y-%m-%d')
+        sales_by_date[d_str] = sales_by_date.get(d_str, 0) + t.amount
+        sales_by_category[t.category] = sales_by_category.get(t.category, 0) + t.amount
+
+    sorted_dates = sorted(sales_by_date.keys())
+    historical_data = [{"date": d, "amount": sales_by_date[d]} for d in sorted_dates]
+
+    prompt = f"""
+    You are a senior financial AI analyst for a cafe business. Analyze the following sales data deeply.
+
+    Historical Sales (Last 90 Days): {json.dumps(historical_data)}
+    Sales by Category: {json.dumps(sales_by_category)}
+
+    TASKS:
+    1. Predict sales for the NEXT 30 DAYS based on trend and seasonality (with realistic volatility).
+    2. Provide 4 strategic recommendations based on the analyzed data.
+
+    IMPORTANT RULES FOR PREDICTION:
+    - **DO NOT** produce a perfectly repeating pattern or a smooth line. Real business is messy.
+    - **ADD VOLATILITY**: Introduce random spikes and dips irregularly.
+    - **VARIANCE**: Vary daily values by +/- 15% to 25% from the trend line.
+    - Maintain the general weekly cycle (weekends usually higher), but make every week look SLIGHTLY DIFFERENT.
+
+    IMPORTANT RULES FOR RECOMMENDATIONS (LANGUAGE & STYLE):
+    - **LANGUAGE**: strictly **BAHASA INDONESIA**.
+    - **NO GENERIC OPENINGS**: Do NOT start with generic phrases like "Untuk meningkatkan...", "Supaya...", or "Agar...".
+    
+    - **DYNAMIC EVIDENCE (THE "REASON-FIRST" RULE)**:
+      Always start with the *observation* or *reason*, then follow with the *solution*. Adjust the evidence type based on the topic:
+      
+      A. **If discussing Revenue/High Sales/Low Sales**: 
+         You MUST include the specific numbers (e.g., "Dengan kontribusi penjualan Kopi sebesar Rp X...", "Melihat pendapatan Snack yang hanya Rp Y...").
+         
+      B. **If discussing Operational/Trends/General Strategy**: 
+         You can use qualitative observations without strict numbers (e.g., "Mengingat tren kunjungan selalu memuncak di akhir pekan...", "Karena variasi menu teh masih terbatas...").
+
+    - **TONE**: Professional, insightful, and persuasive.
+
+    OUTPUT FORMAT (JSON ONLY, no markdown, no extra text):
+    {{
+        "predictions": [
+            {{"date": "YYYY-MM-DD", "predicted_amount": <number>}} 
+        ],
+        "recommendations": [
+            {{
+                "title": "<Judul Singkat & Menarik (Indonesian)>",
+                "type": "<'success' | 'warning' | 'info'>",
+                "description": "<[Alasan/Data/Observasi] + [Saran Strategis] (Indonesian)>"
+            }}
+        ]
+    }}
+    """
+
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile", # atau llama-3.1-8b-instant
+            messages=[
+                {"role": "system", "content": "You are a helpful JSON-speaking data analyst assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+
+        ai_response = json.loads(completion.choices[0].message.content)
+        
+        return jsonify({
+            "historical": historical_data[-30:], 
+            "predictions": ai_response['predictions'],
+            "recommendations": ai_response['recommendations']
+        }), 200
+
+    except Exception as e:
+        print(f"AI Error: {e}")
+        if hasattr(e, 'response'):
+             print(e.response)
+        return jsonify({'error': 'Gagal menghasilkan analisis AI'}), 500
 
 
 # --- Perintah CLI ---

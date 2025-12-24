@@ -594,83 +594,135 @@ def delete_transaction(id):
     db.session.commit()
     return jsonify({'message': 'Transaction deleted'}), 200
 
+def format_rupiah(value):
+    if value is None: return "Rp 0"
+    return f"Rp {int(value):,}".replace(",", ".")
+
 @app.route('/api/analytics/ai-insights', methods=['GET'])
 @jwt_required()
 def get_ai_insights():
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=90)
-    
-    transactions = Transaction.query.filter(
-        Transaction.date >= start_date.date(),
-        Transaction.date <= end_date.date(),
-        Transaction.type == 'income'
-    ).all()
-
-    sales_by_date = {}
-    sales_by_category = {}
-
-    for t in transactions:
-        d_str = t.date.strftime('%Y-%m-%d')
-        sales_by_date[d_str] = sales_by_date.get(d_str, 0) + t.amount
-        sales_by_category[t.category] = sales_by_category.get(t.category, 0) + t.amount
-
-    sorted_dates = sorted(sales_by_date.keys())
-    historical_data = [{"date": d, "amount": sales_by_date[d]} for d in sorted_dates]
-
-    prompt = f"""
-    You are a senior financial AI analyst for a cafe business. Analyze the following sales data deeply.
-
-    Historical Sales (Last 90 Days): {json.dumps(historical_data)}
-    Sales by Category: {json.dumps(sales_by_category)}
-
-    TASKS:
-    1. Predict sales for the NEXT 30 DAYS based on trend and seasonality (with realistic volatility).
-    2. Provide 4 strategic recommendations based on the analyzed data.
-
-    IMPORTANT RULES FOR PREDICTION:
-    - **DO NOT** produce a perfectly repeating pattern or a smooth line. Real business is messy.
-    - **ADD VOLATILITY**: Introduce random spikes and dips irregularly.
-    - **VARIANCE**: Vary daily values by +/- 15% to 25% from the trend line.
-    - Maintain the general weekly cycle (weekends usually higher), but make every week look SLIGHTLY DIFFERENT.
-
-    IMPORTANT RULES FOR RECOMMENDATIONS (LANGUAGE & STYLE):
-    - **LANGUAGE**: strictly **BAHASA INDONESIA**.
-    - **NO GENERIC OPENINGS**: Do NOT start with generic phrases like "Untuk meningkatkan...", "Supaya...", or "Agar...".
-    
-    - **DYNAMIC EVIDENCE (THE "REASON-FIRST" RULE)**:
-      Always start with the *observation* or *reason*, then follow with the *solution*. Adjust the evidence type based on the topic:
-      
-      A. **If discussing Revenue/High Sales/Low Sales**: 
-         You MUST include the specific numbers (e.g., "Dengan kontribusi penjualan Kopi sebesar Rp X...", "Melihat pendapatan Snack yang hanya Rp Y...").
-         
-      B. **If discussing Operational/Trends/General Strategy**: 
-         You can use qualitative observations without strict numbers (e.g., "Mengingat tren kunjungan selalu memuncak di akhir pekan...", "Karena variasi menu teh masih terbatas...").
-
-    - **TONE**: Professional, insightful, and persuasive.
-
-    OUTPUT FORMAT (JSON ONLY, no markdown, no extra text):
-    {{
-        "predictions": [
-            {{"date": "YYYY-MM-DD", "predicted_amount": <number>}} 
-        ],
-        "recommendations": [
-            {{
-                "title": "<Judul Singkat & Menarik (Indonesian)>",
-                "type": "<'success' | 'warning' | 'info'>",
-                "description": "<[Alasan/Data/Observasi] + [Saran Strategis] (Indonesian)>"
-            }}
-        ]
-    }}
-    """
-
     try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=90)
+        
+        transactions = Transaction.query.filter(
+            Transaction.date >= start_date.date(),
+            Transaction.date <= end_date.date(),
+            Transaction.type == 'income'
+        ).all()
+
+        if not transactions:
+            return jsonify({
+                "historical": [],
+                "predictions": [],
+                "recommendations": [{
+                    "title": "Data Belum Tersedia",
+                    "type": "info",
+                    "description": "Belum ada transaksi pendapatan yang tercatat."
+                }]
+            }), 200
+
+        sales_by_date = {}
+        sales_by_category = {}
+
+        for t in transactions:
+            d_str = t.date.strftime('%Y-%m-%d')
+            sales_by_date[d_str] = sales_by_date.get(d_str, 0) + t.amount
+            
+            cat = t.category if t.category else "Uncategorized"
+            sales_by_category[cat] = sales_by_category.get(cat, 0) + t.amount
+
+        sorted_dates = sorted(sales_by_date.keys())
+        historical_data = [{"date": d, "amount": sales_by_date[d]} for d in sorted_dates]
+
+        formatted_sales = {k: format_rupiah(v) for k, v in sales_by_category.items()}
+        sorted_sales = sorted(sales_by_category.items(), key=lambda x: x[1], reverse=True)
+        
+        IGNORED_CATEGORIES = ["Other Income", "Lainnya", "Pendapatan Lain", "Uncategorized"]
+        
+        highest_product = None
+        highest_val_raw = 0
+
+        for product, value in sorted_sales:
+            if product not in IGNORED_CATEGORIES:
+                highest_product = product
+                highest_val_raw = value
+                break
+        
+        if highest_product is None and sorted_sales:
+            highest_product = sorted_sales[0][0]
+            highest_val_raw = sorted_sales[0][1]
+
+        lowest_product = sorted_sales[-1][0]
+        lowest_val_raw = sorted_sales[-1][1]
+        
+        highest_value = format_rupiah(highest_val_raw)
+        lowest_value = format_rupiah(lowest_val_raw)
+
+        prompt = f"""
+            You are a Strategic Business Consultant for a cafe business. 
+            
+            DATA CONTEXT:
+            - Sales Data (Formatted): {json.dumps(formatted_sales)}
+            - Key High Performer: {highest_product} (Revenue: {highest_value})
+            - Key Low Performer: {lowest_product} (Revenue: {lowest_value})
+            - Historical Trends: {json.dumps(historical_data)}
+
+            TASKS:
+            1. Predict sales for the NEXT 30 DAYS (with realistic volatility).
+            2. Provide 4 STRATEGIC RECOMMENDATIONS (Bahasa Indonesia).
+
+            ---------------------------------------------------------
+            GUIDELINES FOR RECOMMENDATIONS:
+            ---------------------------------------------------------
+            
+            **1. DIVERSE TOPIC SELECTION (ORGANIC MIX):**
+            - You must generate 4 recommendations that cover different aspects of the business. 
+            - **DO NOT** use fixed slots. Mix the topics organically among the 4 cards.
+            - **Requirement:** Ensure you cover **Financial Highs** (maintaining success), **Financial Lows** (fixing issues), and **General Operations/Strategy** (trends, staff, events).
+            - *Constraint:* Do NOT make all 4 recommendations about "Revenue/Rp". At least 1 or 2 recommendations should be qualitative (strategy/operations).
+
+            **2. CONTEXTUAL OPENINGS:**
+            - **NO GENERIC OPENERS:** Never start with "Untuk meningkatkan...", "Saran kami...", or "Agar...".
+            - **START WITH CONTEXT:** Always begin the sentence with the *observation* or *reason*.
+                - *Example:* "Mengingat {lowest_product} memiliki kontribusi terendah sebesar {lowest_value}, strategi bundling..."
+
+            **3. CRITICAL: DATA INTEGRITY & FORMATTING (READ CAREFULLY):**
+              1. **NO MAGNITUDE HALLUCINATION**: The input data is in EXACT Rupiah value.
+                 - Input `3170000.0` means **3.17 Million** (Rp 3.170.000).
+                 - It does NOT mean Billions. **DO NOT ADD EXTRA ZEROS**.
+                 - **STRICT CHECK**: If the input has 7 digits (e.g., 3170000), your output MUST NOT have 10 digits. Keep the magnitude exactly as strictly provided.
+              
+              2. **NO FLOATING POINTS**: 
+                 - Never output ".0", ",0", or decimals for IDR.
+                 - BAD: Rp 3.170.000,0 
+                 - GOOD: Rp 3.170.000
+
+              3. **READABILITY**: 
+                 - Use dots (.) as thousand separators.
+                 - If the number is simple, write it out: "Rp 3.170.000".
+                 - If you want to shorten it: "Rp 3,17 Juta".
+
+            OUTPUT FORMAT (JSON ONLY):
+            {{
+                "predictions": [ {{"date": "YYYY-MM-DD", "predicted_amount": <number>}} ],
+                "recommendations": [
+                    {{
+                        "title": "<Judul Singkat & Menarik>",
+                        "type": "<'success' | 'warning' | 'info'>",
+                        "description": "<[Konteks/Data] + [Saran]>"
+                    }}
+                ]
+            }}
+        """
+
         completion = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile", # atau llama-3.1-8b-instant
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are a helpful JSON-speaking data analyst assistant."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
+            temperature=0.4, 
             response_format={"type": "json_object"}
         )
 
@@ -678,15 +730,13 @@ def get_ai_insights():
         
         return jsonify({
             "historical": historical_data[-30:], 
-            "predictions": ai_response['predictions'],
-            "recommendations": ai_response['recommendations']
+            "predictions": ai_response.get('predictions', []),
+            "recommendations": ai_response.get('recommendations', [])
         }), 200
 
     except Exception as e:
-        print(f"AI Error: {e}")
-        if hasattr(e, 'response'):
-             print(e.response)
-        return jsonify({'error': 'Gagal menghasilkan analisis AI'}), 500
+        print(f"AI Analysis Error: {e}")
+        return jsonify({'error': f'Gagal menghasilkan analisis: {str(e)}'}), 500
 
 
 # --- Perintah CLI ---

@@ -23,7 +23,7 @@ interface FinanceStore {
   updateTransaction: (id: string, tx: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 
-  importTransactions: (transactions: Transaction[]) => void;
+  importTransactions: (transactions: any[]) => Promise<void>;
   loadDummyData: () => void;
   clearAllData: () => void;
 }
@@ -117,7 +117,18 @@ export const useFinanceStore = create<FinanceStore>()(
         }));
       },
 
-      importTransactions: () => {},
+      importTransactions: async (transactions) => {
+        try {
+          await apiPost("/transactions/imp", transactions);
+          
+          const currentStore = get();
+          await currentStore.loadTransactions();
+          
+        } catch (error) {
+          console.error("Import failed:", error);
+          throw error; 
+        }
+      },
       loadDummyData: () =>
         set({ transactions: [], products: [], rawMaterials: [] }),
       clearAllData: () =>

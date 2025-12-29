@@ -73,13 +73,13 @@ export function TransactionDialog({
       setAmount(transaction.amount.toString());
       setCategory(transaction.category);
       setDescription(transaction.description);
-      setDate(new Date(transaction.date)); // fix: convert to Date
+      setDate(new Date(transaction.date));
     } else {
       setType("income");
       setAmount("");
       setCategory("");
       setDescription("");
-      setDate(new Date()); // fix: use Date object, not string
+      setDate(new Date());
     }
   }, [transaction, open]);
 
@@ -96,7 +96,7 @@ export function TransactionDialog({
       amount: parseFloat(amount),
       category,
       description,
-      date: date.toISOString(), // fix backend format
+      date: format(date, "yyyy-MM-dd"),
     };
 
     if (transaction) {

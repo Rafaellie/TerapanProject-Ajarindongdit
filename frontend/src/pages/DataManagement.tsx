@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function DataManagement() {
-  const { transactions, products, rawMaterials, importTransactions, loadDummyData, clearAllData } =
+  const { transactions, products, rawMaterials, importTransactions, loadDummyData, clearAllData, loadTransactions } =
     useFinanceStore();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,22 +33,25 @@ export default function DataManagement() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
 
-      const importedTransactions = jsonData.map((row: any) => ({
-        id: Math.random().toString(36).substr(2, 9),
+      const formattedForBackend = jsonData.map((row: any) => ({
         type: row.type?.toLowerCase() === 'expense' ? 'expense' : 'income',
         amount: parseFloat(row.amount) || 0,
-        category: row.category || 'Other',
+        category: row.category || 'Uncategorized',
         description: row.description || '',
-        date: row.date || new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
+        date: row.date ? new Date(row.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       }));
 
-      importTransactions(importedTransactions as any);
-      toast.success(`Imported ${importedTransactions.length} transactions`);
+      await importTransactions(formattedForBackend);
+      
+      toast.success(`Successfully imported ${formattedForBackend.length} transactions`);
+      
+      loadTransactions(); 
+
     } catch (error) {
-      toast.error('Failed to import file. Please check the format.');
+      toast.error('Failed to import file. Check format or server connection.');
       console.error(error);
     }
 

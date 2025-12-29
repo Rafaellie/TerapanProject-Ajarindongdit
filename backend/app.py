@@ -566,6 +566,61 @@ def create_transaction():
     db.session.commit()
     return jsonify(new_tx.to_json()), 201
 
+@app.route('/api/transactions/imp', methods=['POST'])
+@jwt_required()
+def create_imp_transactions():
+    data = request.get_json()
+    
+    if not isinstance(data, list):
+        return jsonify({'error': 'Input must be a list of transactions'}), 400
+        
+    new_transactions = []
+    errors = []
+    
+    for index, item in enumerate(data):
+        try:
+            # Validasi field wajib
+            t_type = item.get('type')
+            amount = item.get('amount')
+            date_str = item.get('date')
+            
+            if not t_type or amount is None or not date_str:
+                errors.append(f"Row {index + 1}: Missing type, amount, or date")
+                continue
+
+            # Parse tanggal
+            try:
+                tx_date = datetime.fromisoformat(date_str).date()
+            except ValueError:
+                errors.append(f"Row {index + 1}: Invalid date format (use YYYY-MM-DD)")
+                continue
+
+            new_tx = Transaction(
+                type=t_type.lower(),
+                amount=float(amount),
+                category=item.get('category', 'Uncategorized'),
+                description=item.get('description', ''),
+                date=tx_date
+            )
+            new_transactions.append(new_tx)
+            
+        except Exception as e:
+            errors.append(f"Row {index + 1}: {str(e)}")
+
+    if not new_transactions:
+        return jsonify({'error': 'No valid transactions found', 'details': errors}), 400
+
+    try:
+        db.session.add_all(new_transactions)
+        db.session.commit()
+        return jsonify({
+            'message': f'Successfully imported {len(new_transactions)} transactions',
+            'errors': errors # Mengembalikan list error jika ada baris yang gagal
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+
 @app.route('/api/transactions/<int:id>', methods=['PUT'])
 def update_transaction(id):
     tx = Transaction.query.get(id)

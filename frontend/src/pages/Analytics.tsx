@@ -25,7 +25,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { parseISO, format, subDays, isWithinInterval } from 'date-fns';
+import { parseISO, format, subDays, isWithinInterval, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
@@ -134,18 +134,22 @@ export default function Analytics() {
     if (!aiData) return [];
 
     // Format historical data
-    const history = aiData.historical.map((h: any) => ({
-      date: format(parseISO(h.date), 'MMM dd'),
-      actual: h.amount,
-      predicted: null
-    }));
+    const history = aiData.historical
+      .filter((h: any) => h.date && isValid(parseISO(h.date)))
+      .map((h: any) => ({
+        date: format(parseISO(h.date), 'MMM dd'),
+        actual: h.amount,
+        predicted: null
+      }));
 
     // Format predicted data
-    const future = aiData.predictions.map((p: any) => ({
-      date: format(parseISO(p.date), 'MMM dd'),
-      actual: null,
-      predicted: p.predicted_amount
-    }));
+    const future = aiData.predictions
+      .filter((p: any) => p.date && isValid(parseISO(p.date)))
+      .map((p: any) => ({
+        date: format(parseISO(p.date), 'MMM dd'),
+        actual: null,
+        predicted: p.predicted_amount
+      }));
 
     // Sambungkan titik terakhir history ke titik pertama prediksi agar grafik nyambung
     if (history.length > 0 && future.length > 0) {

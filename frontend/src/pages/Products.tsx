@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Search, Trash2, Edit, Package } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +33,8 @@ export default function Products() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     loadProducts();
@@ -57,6 +59,16 @@ export default function Products() {
       return true;
     });
   }, [products, searchQuery, categoryFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -95,7 +107,9 @@ export default function Products() {
             Manage your product catalog
           </p>
         </div>
+        
         <Button
+          id="add-product-btn"
           onClick={() => {
             setEditingProduct(null);
             setDialogOpen(true);
@@ -111,6 +125,7 @@ export default function Products() {
         <div className="relative flex-1 min-w-64">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            id="product-search-input"
             placeholder="Search products..."
             className="pl-9"
             value={searchQuery}
@@ -118,7 +133,7 @@ export default function Products() {
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger id="product-filter-category" className="w-40">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -134,84 +149,124 @@ export default function Products() {
 
       {/* Products Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredProducts.map((product) => (
-          <div key={product.id} className="stat-card">
-            <div className="flex items-start justify-between">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-                ) : (
-                  <Package className="h-7 w-7 text-primary" />
-                )}
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(product)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(product.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-            <div className="mt-4">
-              <h3 className="font-semibold text-foreground">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                {product.category}
-              </p>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Price</p>
-                <p className="font-medium text-foreground">
-                  {formatCurrency(product.price)}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Cost</p>
-                <p className="font-medium text-foreground">
-                  {formatCurrency(product.cost)}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Stock</p>
-                <p
-                  className={cn(
-                    "font-medium",
-                    product.stock <= product.minStock
-                      ? "text-warning"
-                      : "text-foreground"
+        {paginatedProducts.map((product) => {
+          const safeName = product.name.replace(/\s+/g, '-');
+
+          return (
+            <div key={product.id} className="stat-card">
+              <div className="flex items-start justify-between">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <Package className="h-7 w-7 text-primary" />
                   )}
-                >
-                  {product.stock} {product.unit}
+                </div>
+                <div className="flex gap-1">
+                  
+                  <Button
+                    id={`edit-btn-${safeName}`}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(product)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    id={`delete-btn-${safeName}`}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(product.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+
+                </div>
+              </div>
+              <div className="mt-4">
+                <h3 className="font-semibold text-foreground">{product.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {product.category}
                 </p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Margin</p>
-                <p className="font-medium text-success">
-                  {(
-                    ((product.price - product.cost) / product.price) *
-                    100
-                  ).toFixed(1)}
-                  %
-                </p>
+              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Price</p>
+                  <p className="font-medium text-foreground">
+                    {formatCurrency(product.price)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Cost</p>
+                  <p className="font-medium text-foreground">
+                    {formatCurrency(product.cost)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Stock</p>
+                  <p
+                    className={cn(
+                      "font-medium",
+                      product.stock <= product.minStock
+                        ? "text-warning"
+                        : "text-foreground"
+                    )}
+                  >
+                    {product.stock} {product.unit}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Margin</p>
+                  <p className="font-medium text-success">
+                    {(
+                      ((product.price - product.cost) / product.price) *
+                      100
+                    ).toFixed(1)}
+                    %
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredProducts.length === 0 && (
         <div className="stat-card py-12 text-center">
           <Package className="mx-auto h-12 w-12 text-muted-foreground" />
           <p className="mt-4 text-muted-foreground">No products found</p>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          <p className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-1">
+            <Button
+              id="prev-page-btn"
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              id="next-page-btn"
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -232,8 +287,10 @@ export default function Products() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel id="cancel-delete-btn">Cancel</AlertDialogCancel>
+            
             <AlertDialogAction
+              id="confirm-delete-btn"
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

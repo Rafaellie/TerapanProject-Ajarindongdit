@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle, Camera, X } from "lucide-react";
+import { Plus, Search, Trash2, Edit, Boxes, AlertTriangle, Camera, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +41,8 @@ export default function Inventory() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Form state
   const [name, setName] = useState("");
@@ -67,6 +69,16 @@ export default function Inventory() {
       return true;
     });
   }, [rawMaterials, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredMaterials.length / itemsPerPage);
+  const paginatedMaterials = filteredMaterials.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const lowStockCount = useMemo(() => {
     return rawMaterials.filter((m) => m.stock <= m.minStock).length;
@@ -254,7 +266,7 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody>
-              {filteredMaterials.map((material) => (
+              {paginatedMaterials.map((material) => (
                 <tr
                   key={material.id}
                   className="border-b border-border last:border-0 hover:bg-muted/30"
@@ -328,6 +340,35 @@ export default function Inventory() {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          <p className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
